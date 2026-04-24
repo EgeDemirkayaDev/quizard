@@ -5,7 +5,7 @@ function Dashboard({ onNavigate, favorites, toggleFavorite, saved, toggleSave, i
   const [searchQuery, setSearchQuery] = useState('');
 
   const quizzes = [
-    { id: 1, title: 'Kişilik Testi', desc: 'Gizemli derinliklerini keşfet.', btn: 'Yoluna Başla', icon: '🔮' },
+    { id: 1, title: 'Kişilik Testidir', desc: 'Gizemli derinliklerini keşfet.', btn: 'Yoluna Başla', icon: '🔮' },
     { id: 2, title: 'Bölümde Hangi Hocasın?', desc: 'Akademik bilgeliğini ölç.', btn: 'Hocanı Bul', icon: '❓' },
     { id: 3, title: 'Yazılım Alanın Ne?', desc: 'Sihirli kodlama yolunu seç.', btn: 'Kodla', icon: '🪄' },
     { id: 4, title: 'Hangi Hayvansın?', desc: 'Ruh hayvanınla tanış.', btn: 'Keşfet', icon: '🦉' }
@@ -78,3 +78,4 @@ function Dashboard({ onNavigate, favorites, toggleFavorite, saved, toggleSave, i
 }
 
 export default Dashboard;
+//yorum
