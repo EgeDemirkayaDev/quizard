@@ -1,15 +1,24 @@
 from database import motor, Taban
-import models # Tablolarımızı (Modelleri) içeri alıyoruz ki motor görsün
+from sqlalchemy import text
+import models
 
 try:
-    print("Veritabanına bağlanılmaya çalışılıyor...")
+    print("Veritabanı temizliğine başlanıyor...")
+    with motor.begin() as baglanti:
+        # 1. Korumaları geçici olarak kapat (Kancaları sök)
+        baglanti.execute(text("SET FOREIGN_KEY_CHECKS = 0;"))
+        
+        # 2. Eski ve hayalet tabloların hepsini acımadan sil
+        baglanti.execute(text("DROP TABLE IF EXISTS kaydedilenler, yorumlar, favoriler, secenekler, test_sonuclari, sorular, testler, kullanicilar;"))
+        
+        # 3. Korumaları geri aç
+        baglanti.execute(text("SET FOREIGN_KEY_CHECKS = 1;"))
+        
+    print("🧹 Eski hayalet tablolar başarıyla temizlendi!")
     
-    # Bu sihirli kod, models.py'daki her şeye bakar ve MySQL'de yoksa otomatik oluşturur.
+    # 4. Yeni mimariyle tertemiz inşa et
     Taban.metadata.create_all(bind=motor)
-    
-    print("🎉 BİNGO! Veritabanı bağlantısı kusursuz çalışıyor!")
-    print("✅ Bütün tablolar MySQL'de hazır ve nazır. Backend ekibi işe başlayabilir!")
+    print("🎉 BİNGO! Yeni tablolar kusursuz şekilde kuruldu!")
     
 except Exception as hata:
-    print("🚨 Ups! Bir sorun var. Şifreni veya MySQL'in açık olup olmadığını kontrol et.")
-    print("Hata detayı:", hata)
+    print("🚨 Ups! Bir sorun var:", hata)

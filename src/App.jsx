@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 function App({ onNavigate }) {
+  // 1. URL'den gelen özel ismi tutacağımız state
+  const [ozelIsim, setOzelIsim] = useState("");
+
+  // 2. Sayfa yüklendiğinde linkin sonundaki "?kime=isim" kısmını yakalama
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isim = params.get('kime'); 
+    if (isim) {
+      // İlk harfi büyütüp state'e kaydediyoruz
+      const formatliIsim = isim.charAt(0).toUpperCase() + isim.slice(1);
+      setOzelIsim(formatliIsim);
+    }
+  }, []);
+
   const quizzes = [
-    { id: 1, title: 'Kişilik Testi', desc: 'Gizemli derinliklerini keşfet.', btn: 'Yoluna Başla', icon: '🔮' },
-    { id: 2, title: 'Bölümde Hangi Hocasın?', desc: 'Akademik bilgeliğini ölç.', btn: 'Hocanı Bul', icon: '❓' },
+    { id: 2, title: 'Kişilik Testi', desc: 'Gizemli derinliklerini keşfet.', btn: 'Yoluna Başla', icon: '🔮' },
+    { id: 1, title: 'Bölümde Hangi Hocasın?', desc: 'Akademik bilgeliğini ölç.', btn: 'Hocanı Bul', icon: '❓' },
     { id: 3, title: 'Yazılım Alanın Ne?', desc: 'Sihirli kodlama yolunu seç.', btn: 'Kodla', icon: '🪄' },
     { id: 4, title: 'Hangi Hayvansın?', desc: 'Ruh hayvanınla tanış.', btn: 'Keşfet', icon: '🦉' }
   ];
@@ -22,6 +36,14 @@ function App({ onNavigate }) {
       <div className="center-content">
         <div className="wizard-container">
           <main className="main-content">
+            
+            {/* 👇 DİNAMİK KARŞILAMA MESAJI BURADA 👇 */}
+            <div className="welcome-banner" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <h2>
+                {ozelIsim ? `Hoş geldin ${ozelIsim}! Seçilmiş kişi sen misin? ⚡` : "Hoş geldin Büyücü! Sihirli yolculuğuna başla. ⚡"}
+              </h2>
+            </div>
+
             <div className="quiz-grid">
               {quizzes.map(q => (
                 <div key={q.id} className="quiz-card">
@@ -29,7 +51,6 @@ function App({ onNavigate }) {
                   <div className="card-info">
                     <h3>{q.title}</h3>
                     <p>{q.desc}</p>
-                    {/* 👇 İŞTE EKSİK OLAN SİHİR BURASI: Tıklayınca quiz sayfasına yönlendiriyor 👇 */}
                     <button className="card-btn" onClick={() => onNavigate('quiz', q.id)}>{q.btn}</button>
                   </div>
                 </div>
