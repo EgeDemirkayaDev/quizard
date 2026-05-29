@@ -1,84 +1,141 @@
-from database import OturumYerel
-from models import Test, Soru, Secenek
+from database import OturumYerel, Taban, motor
+import models
+
+from seed_data.kisilik_testi import KISILIK_TESTI
+from seed_data.hoca_testi import HOCA_TESTI
+from seed_data.alan_testi import ALAN_TESTI
+from seed_data.iliski_testi import ILISKI_TESTI
+
+
+# Tüm testleri istediğimiz sırayla burada topluyoruz.
+TESTLER = [
+    KISILIK_TESTI,
+    HOCA_TESTI,
+    ALAN_TESTI,
+    ILISKI_TESTI,
+]
+
+
+# Veritabanı tablolarını oluşturur.
+def tablolari_olustur():
+    Taban.metadata.create_all(bind=motor)
+
+
+# Eski seed verilerini temizler.
+# Böylece seed.py tekrar çalıştırıldığında aynı veriler tekrar tekrar eklenmez.
+def verileri_temizle(db):
+    db.query(models.OptionScore).delete()
+    db.query(models.TestResult).delete()
+    db.query(models.Comment).delete()
+    db.query(models.SavedTest).delete()
+    db.query(models.Favorite).delete()
+    db.query(models.Option).delete()
+    db.query(models.Question).delete()
+    db.query(models.ResultProfile).delete()
+    db.query(models.Test).delete()
+    db.commit()
+
+
+# Tek bir testi; profilleri, soruları, şıkları ve puanlarıyla ekler.
+def test_ekle(db, test_data):
+    yeni_test = models.Test(
+        slug=test_data["slug"],
+        title=test_data["title"],
+        short_title=test_data.get("short_title"),
+        description=test_data.get("description"),
+        category=test_data.get("category"),
+        icon=test_data.get("icon"),
+        button_text=test_data.get("button_text"),
+        display_order=test_data.get("display_order", 0),
+        is_active=True
+    )
+
+    db.add(yeni_test)
+    db.commit()
+    db.refresh(yeni_test)
+
+    profil_map = {}
+
+    # Sonuç profillerini ekliyoruz.
+    for profil_data in test_data["profiles"]:
+        profil = models.ResultProfile(
+            test_id=yeni_test.id,
+            code=profil_data["code"],
+            title=profil_data["title"],
+            description=profil_data["description"],
+            icon=profil_data.get("icon"),
+            is_hybrid=profil_data.get("is_hybrid", False)
+        )
+
+        db.add(profil)
+        db.commit()
+        db.refresh(profil)
+
+        profil_map[profil.code] = profil
+
+    # Soruları ve seçenekleri ekliyoruz.
+    for soru_sira, soru_data in enumerate(test_data["questions"], start=1):
+        soru = models.Question(
+            test_id=yeni_test.id,
+            text=soru_data["text"],
+            display_order=soru_sira,
+            is_tiebreaker=soru_data.get("is_tiebreaker", False),
+            tiebreaker_order=soru_data.get("tiebreaker_order")
+        )
+
+        db.add(soru)
+        db.commit()
+        db.refresh(soru)
+
+        for secenek_sira, secenek_data in enumerate(soru_data["options"], start=1):
+            secenek = models.Option(
+                question_id=soru.id,
+                text=secenek_data["text"],
+                option_key=secenek_data["key"],
+                display_order=secenek_sira
+            )
+
+            db.add(secenek)
+            db.commit()
+            db.refresh(secenek)
+
+            # Seçeneğin hangi profile kaç puan verdiğini burada ekliyoruz.
+            for profil_code, puan in secenek_data["scores"].items():
+                profil = profil_map.get(profil_code)
+
+                if profil is None:
+                    raise ValueError(f"Profil bulunamadı: {profil_code}")
+
+                skor = models.OptionScore(
+                    option_id=secenek.id,
+                    profile_id=profil.id,
+                    score=puan
+                )
+
+                db.add(skor)
+
+            db.commit()
+
 
 def verileri_yukle():
+    tablolari_olustur()
     db = OturumYerel()
-    
+
     try:
-        # 1. Önce Testin Kendisini Oluşturuyoruz
-        yeni_test = Test(
-            baslik="Trakya Üniversitesi'nde Hangi Hoca Olurdun?",
-            aciklama="Trakya Üniversitesi Bilgisayar Mühendisliği bölümündeki efsane hocalardan hangisisin? Çöz ve öğren!",
-            kategori="Eğlence",
-            ikon="🎓"
-        )
-        db.add(yeni_test)
-        db.commit()
-        db.refresh(yeni_test)
-        
-        # 2. Soruları ve Şıkları Ekliyoruz
-        sorular_ve_siklar = [
-            {
-                "metin": "1. Sabah 08:30 dersi için sınıfa giriş politikan nedir?",
-                "secenekler": [
-                    {"metin": "Kapı saniyeler içinde kapanır. 1 dakika geç kalanı bile içeri almam.", "etiket": "Turgut"},
-                    {"metin": "10-15 dakika opsiyon tanırım. Geç gelenlere hadi geçin derim.", "etiket": "Aydın"},
-                    {"metin": "Derse kimin girip çıktığıyla ilgilenmem, ben dersimi anlatırım.", "etiket": "Deniz"},
-                    {"metin": "8:30 dersi ne ya? Onu ilk gün 10:00 dersi yapmışımdır zaten.", "etiket": "Özlem"}
-                ]
-            },
-            {
-                "metin": "2. Yoklamada imza sayısı ile sınıftaki kişi sayısı tutmuyor. Ne yaparsın?",
-                "secenekler": [
-                    {"metin": "İsimleri tek tek okurum, bir hata varsa asla affetmem.", "etiket": "Turgut"},
-                    {"metin": "Tutarsızlık hissedersem öğrencilere laf söyler geçerim.", "etiket": "Fatma"},
-                    {"metin": "Hocam siler misiniz diyene mail at halledelim derim.", "etiket": "Derya"},
-                    {"metin": "İmza sayısını neden sayayım ki bence bunlar gereksiz şeyler.", "etiket": "Emir"}
-                ]
-            },
-            {
-                "metin": "3. Ödev 1 gün geç atılmış olsun. Puanlaman nasıl olur?",
-                "secenekler": [
-                    {"metin": "Asla tolerans göstermem, direkt 0 veririm.", "etiket": "Aydın"},
-                    {"metin": "Ödev teslimi nedir? Bir de ödev okumakla mı uğraşacağız?", "etiket": "Fatma"},
-                    {"metin": "Vaktinden geç gelse de kabul ederim, puan da kırmam.", "etiket": "Deniz"},
-                    {"metin": "Çok geçerli bir sebebi varsa kabul ederim.", "etiket": "Emir"}
-                ]
-            }
-            # Kanka test uzamasın diye şimdilik ilk 3 soruyu koydum, mantığı anladın :)
-        ]
+        verileri_temizle(db)
 
-        # Döngü ile soruları ve şıkları veritabanına basıyoruz
-        for i, soru_data in enumerate(sorular_ve_siklar):
-            yeni_soru = Soru(
-                test_id=yeni_test.id,
-                soru_metni=soru_data["metin"],
-                sira=i+1
-            )
-            db.add(yeni_soru)
-            db.commit()
-            db.refresh(yeni_soru)
+        for test_data in TESTLER:
+            test_ekle(db, test_data)
 
-            # Bu sorunun şıklarını ekliyoruz
-            for secenek_data in soru_data["secenekler"]:
-                yeni_secenek = Secenek(
-                    soru_id=yeni_soru.id,
-                    metin=secenek_data["metin"],
-                    etiket=secenek_data["etiket"], # Hangi hocaya puan vereceği burada!
-                    puan_agirligi=1.0
-                )
-                db.add(yeni_secenek)
-            
-            db.commit()
+        print("✅ Tüm testler başarıyla veritabanına eklendi.")
 
-        print("🎉 BİNGO! Hoca Testi, soruları ve benzersiz ID'li şıklarıyla veritabanına eklendi!")
-        
-    except Exception as e:
-        print("🚨 Hata oluştu:", e)
+    except Exception as hata:
         db.rollback()
+        print("❌ Seed sırasında hata oluştu:", hata)
+
     finally:
         db.close()
 
+
 if __name__ == "__main__":
-    print("Veriler veritabanına işleniyor, lütfen bekleyin...")
     verileri_yukle()

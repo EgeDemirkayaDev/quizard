@@ -3,21 +3,25 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# 1. Gizli kasadaki (.env) şifreyi oku
 load_dotenv()
-GIZLI_SIFRE = os.getenv("MYSQL_SIFRE")
 
-# 2. Eğer şifre yoksa boş bırak, varsa şifreli bağlan (Dinamik ve güvenli yapı)
-if GIZLI_SIFRE:
-    VT_URL = f"mysql+pymysql://root:{GIZLI_SIFRE}@localhost/quizard_db"
+MYSQL_USER = os.getenv("MYSQL_USER", "root")
+MYSQL_SIFRE = os.getenv("MYSQL_SIFRE", "")
+MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_DB = os.getenv("MYSQL_DB", "quizard_db")
+
+if MYSQL_SIFRE:
+	DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_SIFRE}@{MYSQL_HOST}/{MYSQL_DB}?charset=utf8mb4"
 else:
-    VT_URL = "mysql+pymysql://root@localhost/quizard_db"
+	DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}@{MYSQL_HOST}/{MYSQL_DB}?charset=utf8mb4"
 
-# 3. Veritabanı motorunu çalıştır
-motor = create_engine(VT_URL)
+motor = create_engine(DATABASE_URL, echo=False)
 
-# 4. Backend'in kullanacağı oturum
-OturumYerel = sessionmaker(autocommit=False, autoflush=False, bind=motor)
+OturumYerel = sessionmaker(
+	autocommit=False,
+	autoflush=False,
+	bind=motor
+)
 
-# 5. Tabloların anası
 Taban = declarative_base()
+

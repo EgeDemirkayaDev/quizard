@@ -1,110 +1,86 @@
-// Backend'ci arkadaşın FastAPI sunucusunun adresi. 
-// (FastAPI genelde 8000 portunda çalışır. Onlar sana farklı bir port verirse burayı değiştirirsin kanka)
-const BASE_URL = 'http://localhost:8000/api';
+import { mockTests, mockTestDetails, mockResult } from "./data/mockTests";
 
-// Güvenlik Kapısı: Kullanıcı giriş yaptığında aldığımız "Token"ı her isteğin cebine koyan yardımcı fonksiyon
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token'); // Token'ı tarayıcı hafızasından alıyoruz
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
-// Bütün API isteklerimizi tutan ana obje (Backend'ci abiler buraya bayılacak)
+// Şu an gerçek backend'e bağlanıyoruz.
+// Mock sistemi tamamen kapalı.
+const USE_MOCK = false;
+
+async function request(endpoint, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers
+    },
+    ...options
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.detail || "API isteği başarısız oldu.");
+  }
+
+  return data;
+}
+
 export const api = {
-  
-  // ==========================================
-  // 1. KULLANICI İŞLEMLERİ (AUTH & SETTINGS)
-  // ==========================================
-  
-  login: async (email, password) => {
-    const response = await fetch(`${BASE_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    return response.json();
+  async getTests() {
+    if (USE_MOCK) {
+      return [...mockTests].sort((a, b) => a.order - b.order);
+    }
+
+    return request("/tests");
   },
 
-  register: async (userData) => {
-    const response = await fetch(`${BASE_URL}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  async getTestById(testId) {
+    if (USE_MOCK) {
+      return mockTestDetails[testId];
+    }
+
+    return request(`/tests/${testId}`);
+  },
+
+  async submitTest(testId, optionIds) {
+    if (USE_MOCK) {
+      return mockResult;
+    }
+
+    return request(`/tests/${testId}/submit`, {
+      method: "POST",
+      body: JSON.stringify({
+        option_ids: optionIds
+      })
+    });
+  },
+
+  async getFavorites() {
+    if (USE_MOCK) {
+      return [];
+    }
+
+    return request("/favorites");
+  },
+
+  async getSavedTests() {
+    if (USE_MOCK) {
+      return [];
+    }
+
+    return request("/saved");
+  },
+
+  async register(userData) {
+    return request("/register", {
+      method: "POST",
       body: JSON.stringify(userData)
     });
-    return response.json();
   },
 
-  updateSettings: async (settingsData) => {
-    const response = await fetch(`${BASE_URL}/settings`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(settingsData)
+  async login(loginData) {
+    return request("/login", {
+      method: "POST",
+      body: JSON.stringify(loginData)
     });
-    return response.json();
-  },
-
-  // ==========================================
-  // 2. TESTLER (QUIZZES)
-  // ==========================================
-  
-  getAllQuizzes: async () => {
-    const response = await fetch(`${BASE_URL}/quizzes`, {
-      method: 'GET',
-      headers: getAuthHeaders()
-    });
-    return response.json();
-  },
-
-  getQuizById: async (quizId) => {
-    const response = await fetch(`${BASE_URL}/quizzes/${quizId}`, {
-      method: 'GET',
-      headers: getAuthHeaders()
-    });
-    return response.json();
-  },
-
-  // ==========================================
-  // 3. FAVORİLER VE KAYDEDİLENLER
-  // ==========================================
-  
-  toggleFavorite: async (quizId) => {
-    const response = await fetch(`${BASE_URL}/favorites/toggle`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ quiz_id: quizId })
-    });
-    return response.json();
-  },
-
-  toggleSaved: async (quizId) => {
-    const response = await fetch(`${BASE_URL}/saved/toggle`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ quiz_id: quizId })
-    });
-    return response.json();
-  },
-
-  // ==========================================
-  // 4. YORUMLAR (COMMENTS)
-  // ==========================================
-  
-  getMyComments: async () => {
-    const response = await fetch(`${BASE_URL}/comments/me`, {
-      method: 'GET',
-      headers: getAuthHeaders()
-    });
-    return response.json();
-  },
-
-  addComment: async (quizId, content) => {
-    const response = await fetch(`${BASE_URL}/comments`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ quiz_id: quizId, content })
-    });
-    return response.json();
   }
 };
