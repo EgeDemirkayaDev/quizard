@@ -1,27 +1,22 @@
-import os
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-load_dotenv()
+# SQLite veritabanı dosyasının yolu (Proje klasöründe otomatik oluşur)
+DATABASE_URL = "sqlite:///./quizard.db"
 
-MYSQL_USER = os.getenv("MYSQL_USER", "root")
-MYSQL_SIFRE = os.getenv("MYSQL_SIFRE", "")
-MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
-MYSQL_DB = os.getenv("MYSQL_DB", "quizard_db")
-
-if MYSQL_SIFRE:
-	DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_SIFRE}@{MYSQL_HOST}/{MYSQL_DB}?charset=utf8mb4"
-else:
-	DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}@{MYSQL_HOST}/{MYSQL_DB}?charset=utf8mb4"
-
-motor = create_engine(DATABASE_URL, echo=False)
-
-OturumYerel = sessionmaker(
-	autocommit=False,
-	autoflush=False,
-	bind=motor
+# Motoru oluşturuyoruz (SQLite için check_same_thread ayarı zorunludur)
+motor = create_engine(
+    DATABASE_URL, 
+    connect_args={"check_same_thread": False}, 
+    echo=False
 )
 
-Taban = declarative_base()
+# Veritabanı oturumu yönetimi (Aynen korundu)
+OturumYerel = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=motor
+)
 
+# Modellerin türeyeceği ana sınıf (Aynen korundu)
+Taban = declarative_base()

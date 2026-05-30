@@ -28,8 +28,8 @@ def sifre_dogru_mu(girilen_sifre: str, kayitli_hash: str):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"],  # Dünyadaki herkese izin ver
+    allow_credentials=False, # Güvenlik çakışmasını önlemek için bunu False yapıyoruz
     allow_methods=["*"],
     allow_headers=["*"],
 )
